@@ -1,4 +1,5 @@
 import numpy as np
+import numpy.linalg as nplinalg
 
 h_bar, m = 1, 1/2
 
@@ -45,13 +46,15 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=
     psi = np.zeros((nspace, ntime), dtype=np.complex128)
     psi[:, 0] = init_cond
 
-
+    H = make_tridiagonal(nspace, ntime, (-(h_bar**2)/(2*m*(h**2))), (2*(h_bar**2)/(2*m*(h**2)))+V, (-(h_bar**2)/(2*m*(h**2))))
 
     if (method == 'ftcs'):
-        H = make_tridiagonal(nspace, ntime, (-(h_bar**2)/(2*m*(h**2))), (2*(h_bar**2)/(2*m*(h**2)))+V, (-(h_bar**2)/(2*m*(h**2))))
-        print(H)
         for i in range(ntime-1):
             psi[:, i+1] = (make_tridiagonal(nspace, ntime, 0, 1, 0) - (1j*tau/h_bar)*H).dot(psi[:, i])   
+    elif (method == 'crank'):
+        print(method)
+        for i in range(ntime-1):
+            psi[:, i+1] = nplinalg.inv(make_tridiagonal(nspace, ntime, 0, 1, 0) + (1j*tau/(2*h_bar))*H).dot(make_tridiagonal(nspace, ntime, 0, 1, 0) - (1j*tau/(2*h_bar))*H).dot(psi[:, i])
     
     prob = np.zeros(ntime)
     
@@ -60,7 +63,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=
 
 def main():
     nspace, ntime, tau = 7, 7, 0.1
-    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau)
+    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank')
     print(psi)
 
 if __name__ == '__main__':
