@@ -46,25 +46,30 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=
     psi = np.zeros((nspace, ntime), dtype=np.complex128)
     psi[:, 0] = init_cond
 
+    prob = np.zeros(ntime)
+    prob[0] = np.sum(np.abs(psi[:, 0])**2)*h*tau
+
     H = make_tridiagonal(nspace, ntime, (-(h_bar**2)/(2*m*(h**2))), (2*(h_bar**2)/(2*m*(h**2)))+V, (-(h_bar**2)/(2*m*(h**2))))
 
     if (method == 'ftcs'):
         for i in range(ntime-1):
-            psi[:, i+1] = (make_tridiagonal(nspace, ntime, 0, 1, 0) - (1j*tau/h_bar)*H).dot(psi[:, i])   
+            psi[:, i+1] = (make_tridiagonal(nspace, ntime, 0, 1, 0) - (1j*tau/h_bar)*H).dot(psi[:, i])
+            prob[i+1] = np.sum(np.abs(psi[:, i+1])**2)*h*tau
     elif (method == 'crank'):
-        print(method)
         for i in range(ntime-1):
             psi[:, i+1] = nplinalg.inv(make_tridiagonal(nspace, ntime, 0, 1, 0) + (1j*tau/(2*h_bar))*H).dot(make_tridiagonal(nspace, ntime, 0, 1, 0) - (1j*tau/(2*h_bar))*H).dot(psi[:, i])
-    
-    prob = np.zeros(ntime)
+            prob[i+1] = np.sum(np.abs(psi[:, i+1])**2)*h*tau    
+    else:
+        print("Invalid Method\n")
     
     return psi, x_points, t_points, prob
 
 
 def main():
-    nspace, ntime, tau = 7, 7, 0.1
-    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank')
+    nspace, ntime, tau = 100, 100, 0.1
+    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank', potential=[np.arange(0, 50, 1)])
     print(psi)
+    print(prob)
 
 if __name__ == '__main__':
     main()
