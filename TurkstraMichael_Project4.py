@@ -86,17 +86,37 @@ def sch_animate(data, x_points, t_points, type):
     animation = camera.animate()                                                      
     animation.save(f"TurkstraMichael_Project4_Animation_{type}.mp4",fps=60)                               
     
-
+def sch_plot(data, x_points, t_points, plot, save, time):
+    '''
+    '''
+    plt.figure()
+    if plot == 'psi':
+        plt.plot(x_points, data[:, time])
+        plt.title(f"Ψ(x) at t = {t_points[time]}")
+        plt.xlabel("x")
+        plt.ylabel("Ψ(x)")
+    elif plot == 'prob':
+        plt.plot(x_points, data[:, time])
+        plt.title(f"Ψ*Ψ(x) at t = {t_points[time]}")
+        plt.xlabel("x")
+        plt.ylabel("Ψ*Ψ(x)")
+    else:
+        print("Invalid plot inputed\n")
+    plt.grid()
+    if save:
+        plt.savefig(f'TurkstraMichael_Project4_Fig_{plot}.png')
+    else:
+        plt.show()
 
 def main():
     '''
     '''
     nspace, ntime, tau = 100, 50000, 0.1
     psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank', potential=[80])
-    #sch_plot(psi, x_grid, t_grid, 'psi', True, 10)
-    #sch_plot(prob, x_grid, t_grid, 'prob', True, 99)
-    sch_animate(psi, x_grid, t_grid, 'psi')
-    sch_animate(prob, x_grid, t_grid, 'prob')
+    sch_plot(psi, x_grid, t_grid, 'psi', True, 10)
+    sch_plot(prob, x_grid, t_grid, 'prob', True, 99)
+    #sch_animate(psi, x_grid, t_grid, 'psi')
+    #sch_animate(prob, x_grid, t_grid, 'prob')
 
 if __name__ == '__main__':
     main()
