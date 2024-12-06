@@ -2,6 +2,8 @@ import numpy as np
 import numpy.linalg as nplinalg
 import matplotlib.pyplot as plt
 from celluloid import Camera
+from numpy import linalg as LA
+
 
 h_bar, m = 1, 1/2
 
@@ -20,6 +22,22 @@ def make_tridiagonal(Nspace, b, d, a):                                          
     D = d*np.identity(Nspace)+a*np.diagflat(np.ones(Nspace-1),1)+b*np.diagflat(np.ones(Nspace-1),-1)                       ## Equation for making required matrix, d*diagonal + b*diagonal-1, + a*diagonal+1, takes insperation from “lecture10a-FTCS-Diffusion_mtx.ipynb”
     D[Nspace-1, 0], D[0, Nspace-1] = a, b
     return D                                                                                                    ## Return matrix
+
+def check_stability(input_2d_array):
+    '''
+    Function to calculate the maximum eigen value of a matrix input, and notify user if input will give stable results.
+    Args: input_2d_array matrix to calculate eigenvalues and eigenvectors
+    Returns: maximum eigen value
+    '''
+    max_eigen_val = 0                                                                                           ## Initialize holder for maximum eigen value
+    eigenvalues = LA.eigvals(input_2d_array)                                                                    ## Using linalg.eig to calculate eigen values and vectors
+    for i in range(len(eigenvalues)):                                                                           ## Loop through the eigenvalues
+        if (np.absolute(i) > max_eigen_val):                                                                    ## Check if current eigenvalue is greater that max eigen val
+            max_eigen_val = np.absolute(i)                                                                      ## If so update max eigen value
+    if (max_eigen_val <= 1):                                                                                    ## Check if max_eigen_val is within range to be stable
+        print("The FTCS simulation is expected to be stable\n")                                                 ## Notify user of stability
+    else:
+        print("The FTCS simulation is not expected to be stable\n")                                             ## Notify user of instability
 
 
 def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=[10, 0, 0.5]):
@@ -48,13 +66,16 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=
     H = -((h_bar**2)/2*m)*make_tridiagonal(nspace, 1/(h**2), -2/(h**2), 1/(h**2)) + V*np.identity(nspace)
 
     if (method == 'ftcs'):
+        A = make_tridiagonal(nspace, 0, 1, 0) - (1j*tau/h_bar)*H
+        check_stability(A)
         for i in range(ntime-1):
-            psi[:, i+1] = (make_tridiagonal(nspace, 0, 1, 0) - (1j*tau/h_bar)*H).dot(psi[:, i])
+            psi[:, i+1] = A.dot(psi[:, i])
             prob[:, i+1] = (np.abs(psi[:, i+1])**2)*h*tau
             #prob[:, i+1] = np.conjugate(psi[:, i+1]).dot(psi[:, i+1])*h*tau
     elif (method == 'crank'):
+        A = nplinalg.inv(make_tridiagonal(nspace, 0, 1, 0) + (1j*tau/(2*h_bar))*H).dot(make_tridiagonal(nspace, 0, 1, 0) - (1j*tau/(2*h_bar))*H)
         for i in range(ntime-1):
-            psi[:, i+1] = nplinalg.inv(make_tridiagonal(nspace, 0, 1, 0) + (1j*tau/(2*h_bar))*H).dot(make_tridiagonal(nspace, 0, 1, 0) - (1j*tau/(2*h_bar))*H).dot(psi[:, i])
+            psi[:, i+1] = A.dot(psi[:, i])
             prob[:, i+1] = (np.abs(psi[:, i+1])**2)*h*tau
             #prob[:, i+1] = np.conjugate(psi[:, i+1]).dot(psi[:, i+1])*h*tau
     else:
@@ -112,7 +133,7 @@ def main():
     '''
     '''
     nspace, ntime, tau = 100, 50000, 0.1
-    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank', potential=[80])
+    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'ftcs', potential=[])
     sch_plot(psi, x_grid, t_grid, 'psi', True, 10)
     sch_plot(prob, x_grid, t_grid, 'prob', True, 99)
     #sch_animate(psi, x_grid, t_grid, 'psi')
