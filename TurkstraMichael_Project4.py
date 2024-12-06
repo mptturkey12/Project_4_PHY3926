@@ -29,12 +29,12 @@ def check_stability(input_2d_array):
     Args: input_2d_array matrix to calculate eigenvalues and eigenvectors
     Returns: maximum eigen value
     '''
-    max_eigen_val = 0                                                                                           ## Initialize holder for maximum eigen value
-    eigenvalues = LA.eigvals(input_2d_array)                                                                    ## Using linalg.eig to calculate eigen values and vectors
+    stable = True                                                                                               ## Initialize boolean for tracking if stable or not
+    eigenvalues = LA.eigvals(input_2d_array)                                                                    ## Using linalg.eig to calculate eigen values of input matrix
     for i in range(len(eigenvalues)):                                                                           ## Loop through the eigenvalues
-        if (np.absolute(i) > max_eigen_val):                                                                    ## Check if current eigenvalue is greater that max eigen val
-            max_eigen_val = np.absolute(i)                                                                      ## If so update max eigen value
-    if (max_eigen_val <= 1):                                                                                    ## Check if max_eigen_val is within range to be stable
+        if (np.real(eigenvalues[i]) > 0):                                                                       ## Check if real part of current eigenvalue is negative
+            stable = False                                                                                      ## If so update stable flag
+    if (stable):                                                                                                ## Check if stable flag is still stable (i.e. no unstable eigenvalues)
         print("The FTCS simulation is expected to be stable\n")                                                 ## Notify user of stability
     else:
         print("The FTCS simulation is not expected to be stable\n")                                             ## Notify user of instability
@@ -95,14 +95,14 @@ def sch_animate(data, x_points, t_points, type):
         plt.xlabel("x")
         plt.ylabel("Ψ(x)")
         for i in range(0, len(t_points), 5):
-            plt.plot(x_points, data[:, i], color='blue', label=f"Schrodinger Eq at t = {t_points[i]}")
+            plt.plot(x_points, np.real(data[:, i]), color='blue', label=f"Schrodinger Eq at t = {t_points[i]}")
             camera.snap()                                                                                   
     elif type == 'prob':
         plt.title("Ψ*Ψ(x) Animation")
         plt.xlabel("x")
         plt.ylabel("Ψ*Ψ(x)")
         for i in range(0, len(t_points), 5):
-            plt.plot(x_points, data[:, i], color='blue')
+            plt.plot(x_points, np.real(data[:, i]), color='blue')
             camera.snap()
     animation = camera.animate()                                                      
     animation.save(f"TurkstraMichael_Project4_Animation_{type}.mp4",fps=60)                               
@@ -112,12 +112,12 @@ def sch_plot(data, x_points, t_points, plot, save, time):
     '''
     plt.figure()
     if plot == 'psi':
-        plt.plot(x_points, data[:, time])
+        plt.plot(x_points, np.real(data[:, time]))
         plt.title(f"Ψ(x) at t = {t_points[time]}")
         plt.xlabel("x")
         plt.ylabel("Ψ(x)")
     elif plot == 'prob':
-        plt.plot(x_points, data[:, time])
+        plt.plot(x_points, np.real(data[:, time]))
         plt.title(f"Ψ*Ψ(x) at t = {t_points[time]}")
         plt.xlabel("x")
         plt.ylabel("Ψ*Ψ(x)")
@@ -132,10 +132,10 @@ def sch_plot(data, x_points, t_points, plot, save, time):
 def main():
     '''
     '''
-    nspace, ntime, tau = 100, 50000, 0.1
-    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'ftcs', potential=[])
-    sch_plot(psi, x_grid, t_grid, 'psi', True, 10)
-    sch_plot(prob, x_grid, t_grid, 'prob', True, 99)
+    nspace, ntime, tau = 1000, 10000, 0.1
+    psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank', potential=[800])
+    #sch_plot(psi, x_grid, t_grid, 'psi', True, 10)
+    #sch_plot(prob, x_grid, t_grid, 'prob', True, 99)
     #sch_animate(psi, x_grid, t_grid, 'psi')
     #sch_animate(prob, x_grid, t_grid, 'prob')
 
