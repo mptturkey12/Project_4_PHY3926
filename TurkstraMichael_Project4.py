@@ -6,13 +6,13 @@ from numpy import linalg as LA
 
 h_bar, m = 1, 1/2                                                                                                   ## Initializing h_bar and m to values outlined in project description
 
-def sch_init_cond(x_points, sig_0, k_0, x_0):                                                                       ## Similar to lab 10
+def sch_init_cond(x_points, sig_0, k_0, x_0):                                                                       ## Modified version from lab 10
     '''
     Function to apply gaussian initial conditions to inputted array using equation 9.42 from the textbook
     Args: x_points grid spacing, sig_0 standard deviation, k_0 wave number, x_0 center
     Returns: 1d array holding initial conditions applied to x_points
     '''
-    init_cond = (1/np.sqrt(sig_0)*np.sqrt(np.pi))*np.exp((k_0*x_points*1j) - ((x_points-x_0)**2)/((2*sig_0)**2))    ## Calculating initial conditions array using equation 9.42
+    init_cond = (1/np.sqrt(sig_0)*np.sqrt(np.pi))*np.exp((k_0*x_points*1j) - ((x_points-x_0)**2)/((2*sig_0)**2))    ## Calculating initial conditions array using equation 9.42 from textbook
     return init_cond                                                                                                ## Returning initial conditions array
 
 def make_tridiagonal(Nspace, b, d, a):                                                                              ## From Lab 10
@@ -25,7 +25,7 @@ def make_tridiagonal(Nspace, b, d, a):                                          
     D[Nspace-1, 0], D[0, Nspace-1] = a, b                                                                           ## Setting periodic boundary conditions
     return D                                                                                                        ## Return matrix
 
-def check_stability(input_2d_array):
+def check_stability(input_2d_array):                                                                                ## Modified version from lab 10
     '''
     Function to calculate eigenvalues of the input matrix, check if any eigen values are unstable and notify user if input will give stable results.
     Args: input_2d_array matrix to calculate eigenvalues
@@ -40,6 +40,7 @@ def check_stability(input_2d_array):
         print("The FTCS simulation is expected to be stable\n")                                                     ## Notify user of stability
     else:
         print("The FTCS simulation is not expected to be stable\n")                                                 ## Notify user of instability
+    return stable
 
 
 def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=[10, 0, 0.5]):
@@ -71,10 +72,12 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=
 
     if (method == 'ftcs'):                                                                                          ## Check if user inputted FTCS method
         A = make_tridiagonal(nspace, 0, 1, 0) - (1j*tau/h_bar)*H                                                    ## Make A matrix using equation 9.32 from the textbook
-        check_stability(A)                                                                                          ## Calling check_stability to notify user of stability
-        for i in range(ntime-1):                                                                                    ## Looping through the time points
-            psi[:, i+1] = A.dot(psi[:, i])                                                                          ## Calculating psi at n+1 using FTCS method
-            prob[:, i+1] = (np.abs(psi[:, i+1])**2)*h*tau                                                           ## Calculating particle probability density using equation from project outline
+        if (check_stability(A)):                                                                                    ## Calling check_stability to check and notify user of stability 
+            for i in range(ntime-1):                                                                                ## If solution is stable Looping through the time points
+                psi[:, i+1] = A.dot(psi[:, i])                                                                      ## Calculating psi at n+1 using FTCS method
+                prob[:, i+1] = (np.abs(psi[:, i+1])**2)*h*tau                                                       ## Calculating particle probability density using equation from project outline
+        else:                                                                                                       ## Else i.e. unstable
+            print("Exited without solving.\n")                                                                        ## Notify user and exit without doing calculation
     elif (method == 'crank'):                                                                                       ## Check if user inputted Crank-Nicholson method
         A = nplinalg.inv(make_tridiagonal(nspace, 0, 1, 0) + (1j*tau/(2*h_bar))*H).dot(make_tridiagonal(nspace, 0, 1, 0) - (1j*tau/(2*h_bar))*H) ## Calculate A matrix using equation 9.40 from the textbook
         for i in range(ntime-1):                                                                                    ## Looping through the time points
@@ -85,7 +88,7 @@ def sch_eqn(nspace, ntime, tau, method='ftcs', length=200, potential=[], wparam=
 
     return psi, x_points, t_points, prob                                                                            ## Returning psi matrix, x_points array, t_points array, prob matrix
 
-def sch_animate(data, x_points, t_points, type):
+def sch_animate(data, x_points, t_points, type, filename):
     '''
     Function to visualize data from sch_eqn using an animation showing either psi or prob of x at every time point
     Args: data 2d numpy array can be psi or prob, x_points data's spacial grid, t_points data's time grid, type string to determine type of data
@@ -93,6 +96,7 @@ def sch_animate(data, x_points, t_points, type):
     '''
     fig = plt.figure()                                                                                              ## Initializing figure
     camera = Camera(fig)                                                                                            ## Initializting camera to figure
+    plt.grid()
     if type == 'psi':                                                                                               ## Checking if type is psi
         plt.title("Ψ(x) Animation")
         plt.xlabel("x")                                                                                             ## Labeling plot for psi animation
@@ -108,11 +112,14 @@ def sch_animate(data, x_points, t_points, type):
             plt.plot(x_points, np.real(data[:, i]), color='blue')                                                   ## Plotting data at current time point
             camera.snap()                                                                                           ## Capturing frame
     animation = camera.animate()                                                                                    ## Compiling frames together
-    animation.save(f"TurkstraMichael_Project4_Animation_{type}.mp4",fps=60)                                         ## Saving animation
+    if filename != '':
+        animation.save(f"{filename}.mp4",fps=60)                                                                    ## Saving animation
+    else:
+        print("Filename required to save figure.\n")
     
-def sch_plot(data, x_points, t_points, type, save, time):
+def sch_plot(data, x_points, t_points, type, save, time, filename):
     '''
-    Funtion to plot either psi or prob data from sch_eqn at a time index.
+    Funtion to plot either psi or prob data from sch_eqn at a time index
     Args: data 2d numpy array can be psi or prob, x_points array to hold spacial grid of data, t_points array to hold time grid of data, type string to determine type of data
     Returns: void
     '''
@@ -130,21 +137,24 @@ def sch_plot(data, x_points, t_points, type, save, time):
     else:                                                                                                           ## Else unrecognized type
         print("Invalid plot inputed\n")                                                                             ## Notify user
     plt.grid()                                                                                                      ## Adding grid to plot
-    if save:                                                                                                        ## Checking is user requested plot to be saved
-        plt.savefig(f'TurkstraMichael_Project4_Fig_{type}.png')                                                     ## Saving plot
-    else:
+    if save != True:                                                                                                ## Checking is user requested plot to be saved
         plt.show()                                                                                                  ## Showing plot
+    elif ((save) & (filename != '')):
+        plt.savefig(f'{filename}.png')                                                                              ## Saving plot
+    else:
+        print("Filename required to save animation.\n")
+        
 
 def main():
     '''
-    Function to set parameters and call functions.
+    Function to set parameters and call functions for testing, can be removed or have your code placed users code placed inside
     '''
     nspace, ntime, tau = 1000, 10000, 0.1                                                                           ## Arbitrary parameter values for testing
     psi, x_grid, t_grid, prob = sch_eqn(nspace, ntime, tau, 'crank', potential=[800])                               ## Calling sch_eqn to solve 1 dimentional, time dependant, Schrodinger Equation
-    sch_plot(psi, x_grid, t_grid, 'psi', True, 10)                                                                  ## Calling sch_plot to plot psi data
-    sch_plot(prob, x_grid, t_grid, 'prob', True, 99)                                                                ## Calling sch_plot to plot prob data
-    sch_animate(psi, x_grid, t_grid, 'psi')                                                                         ## Calling sch_animate to make animation of psi data
-    sch_animate(prob, x_grid, t_grid, 'prob')                                                                       ## Calling sch_animate to make animation of prob data
+    sch_plot(psi, x_grid, t_grid, 'psi', True, 10, 'TurkstraMichael_Project4_Fig_psi')                                 ## Calling sch_plot to plot psi data
+    sch_plot(prob, x_grid, t_grid, 'prob', True, 99, 'TurkstraMichael_Project4_Fig_prob')                              ## Calling sch_plot to plot prob data
+    sch_animate(psi, x_grid, t_grid, 'psi', 'TurkstraMichael_Project4_Animation_psi')                               ## Calling sch_animate to make animation of psi data
+    sch_animate(prob, x_grid, t_grid, 'prob', 'TurkstraMichael_Project4_Animation_prob')                            ## Calling sch_animate to make animation of prob data
 
 if __name__ == '__main__':
     main()
